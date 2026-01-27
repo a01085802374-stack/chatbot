@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const prompt = `다음 뉴스들을 읽고 요약해주세요. 각 뉴스의 핵심 내용을 간결하게 정리하고, 전체적인 트렌드나 주요 이슈를 파악하여 종합적으로 요약해주세요.\n\n${newsText}\n\n요약:`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
