@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const prompt = `당신은 뉴스에 대해 대화할 수 있는 AI 어시스턴트입니다. 사용자의 질문에 답변할 때 제공된 뉴스 정보를 참고하여 정확하고 유용한 답변을 제공해주세요.${newsContext}${historyContext}\n\n사용자: ${message}\n\nAI:`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
