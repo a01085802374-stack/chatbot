@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+interface NewsItem {
+  title: string;
+  snippet: string;
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { message, news, conversationHistory } = await request.json();
@@ -22,24 +32,22 @@ export async function POST(request: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // 뉴스 컨텍스트 생성
     let newsContext = '';
     if (news && Array.isArray(news) && news.length > 0) {
-      newsContext = '\n\n참고할 뉴스:\n' + news
-        .map((item: any, index: number) => {
+      newsContext = '\n\n참고할 뉴스:\n' + (news as NewsItem[])
+        .map((item: NewsItem, index: number) => {
           return `${index + 1}. ${item.title}\n   ${item.snippet}\n`;
         })
         .join('\n');
     }
 
-    // 대화 히스토리 생성
     let historyContext = '';
     if (conversationHistory && Array.isArray(conversationHistory)) {
-      historyContext = '\n\n이전 대화:\n' + conversationHistory
-        .slice(-5) // 최근 5개만 사용
-        .map((msg: any) => {
+      historyContext = '\n\n이전 대화:\n' + (conversationHistory as ChatMessage[])
+        .slice(-5)
+        .map((msg: ChatMessage) => {
           return `${msg.role === 'user' ? '사용자' : 'AI'}: ${msg.content}`;
         })
         .join('\n');
@@ -52,10 +60,11 @@ export async function POST(request: NextRequest) {
     const reply = response.text();
 
     return NextResponse.json({ reply });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Chat error:', error);
+    const errorMessage = error instanceof Error ? error.message : '채팅 중 오류가 발생했습니다.';
     return NextResponse.json(
-      { error: error.message || '채팅 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
