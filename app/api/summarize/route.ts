@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+interface NewsItem {
+  title: string;
+  snippet: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { news } = await request.json();
@@ -22,11 +27,10 @@ export async function POST(request: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // 뉴스 데이터를 텍스트로 변환
-    const newsText = news
-      .map((item: any, index: number) => {
+    const newsText = (news as NewsItem[])
+      .map((item: NewsItem, index: number) => {
         return `${index + 1}. ${item.title}\n   ${item.snippet}\n`;
       })
       .join('\n');
@@ -38,10 +42,11 @@ export async function POST(request: NextRequest) {
     const summary = response.text();
 
     return NextResponse.json({ summary });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Summarize error:', error);
+    const errorMessage = error instanceof Error ? error.message : '요약 중 오류가 발생했습니다.';
     return NextResponse.json(
-      { error: error.message || '요약 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
