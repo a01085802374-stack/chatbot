@@ -8,6 +8,7 @@
 - 📰 최대 10개의 뉴스 표시
 - 📝 제미나이 API를 사용한 뉴스 요약
 - 💬 뉴스 기반 대화형 챗봇
+- 💾 Supabase를 활용한 검색 기록 및 뉴스 저장
 
 ## 환경 변수 설정
 
@@ -17,8 +18,11 @@
 
 ```
 GEMINI_API_KEY=your_gemini_api_key_here
-GOOGLE_SEARCH_API_KEY=your_google_search_api_key_here
-GOOGLE_SEARCH_ENGINE_ID=your_search_engine_id_here
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
 ### Vercel 배포
@@ -27,8 +31,9 @@ GOOGLE_SEARCH_ENGINE_ID=your_search_engine_id_here
 2. Settings > Environment Variables 섹션으로 이동
 3. 다음 환경 변수들을 추가:
    - `GEMINI_API_KEY`: Google Gemini API 키
-   - `GOOGLE_SEARCH_API_KEY`: Google Custom Search API 키
-   - `GOOGLE_SEARCH_ENGINE_ID`: Google Custom Search Engine ID
+   - `NEXT_PUBLIC_SUPABASE_URL`: Supabase 프로젝트 URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase Anonymous Key
+   - `SUPABASE_SERVICE_ROLE_KEY`: Supabase Service Role Key
 
 ## 설치 및 실행
 
@@ -48,9 +53,48 @@ npm run dev
 1. [Google AI Studio](https://makersuite.google.com/app/apikey)에 접속
 2. API 키 생성
 
-### NewsAPI (선택사항)
-1. [NewsAPI](https://newsapi.org/register)에 접속하여 무료 계정 생성
-2. API 키 발급
-3. `.env.local` 파일에 `NEWS_API_KEY` 추가
+### Supabase 설정
+1. [Supabase](https://supabase.com)에 접속하여 계정 생성
+2. 새 프로젝트 생성
+3. Project Settings > API에서 키 확인:
+   - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
+   - `anon public` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `service_role` → `SUPABASE_SERVICE_ROLE_KEY`
+4. SQL Editor에서 `supabase-schema.sql` 파일의 내용 실행
 
-**참고**: NewsAPI 키가 없어도 Google News RSS를 통해 뉴스 검색이 가능합니다. 다만 NewsAPI를 사용하면 더 많은 뉴스와 상세 정보를 얻을 수 있습니다.
+### 데이터베이스 테이블 구조
+
+#### searches (검색 기록)
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | UUID | Primary Key |
+| keyword | TEXT | 검색 키워드 |
+| created_at | TIMESTAMP | 생성 시간 |
+
+#### news_items (뉴스 아이템)
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | UUID | Primary Key |
+| search_id | UUID | 검색 기록 FK |
+| title | TEXT | 뉴스 제목 |
+| link | TEXT | 뉴스 링크 |
+| snippet | TEXT | 뉴스 내용 요약 |
+| display_link | TEXT | 표시용 링크 |
+| created_at | TIMESTAMP | 생성 시간 |
+
+## API 엔드포인트
+
+### POST /api/search
+키워드로 뉴스 검색 및 DB 저장
+
+### POST /api/summarize
+뉴스 요약 생성
+
+### POST /api/chat
+뉴스 기반 AI 대화
+
+### GET /api/history
+검색 히스토리 조회 (쿼리: `limit`, `keyword`)
+
+### DELETE /api/history
+검색 기록 삭제 (쿼리: `id`)
