@@ -39,7 +39,7 @@ git push -u origin main
 3. 방금 만든 GitHub 저장소 선택
 4. "Import" 클릭
 5. **환경 변수 설정**:
-   - `GEMINI_API_KEY`: `AIzaSyDgO2AxMYt-Fd7aMBA9Lu4o5ku0bGulNu4`
+   - `GEMINI_API_KEY`: 발급받은 Gemini API 키
    - `NEWS_API_KEY`: (선택사항)
 6. "Deploy" 클릭
 
@@ -64,7 +64,7 @@ vercel
 1. Vercel 대시보드로 이동
 2. 프로젝트 선택 → Settings → Environment Variables
 3. 다음 변수 추가:
-   - `GEMINI_API_KEY`: `AIzaSyDgO2AxMYt-Fd7aMBA9Lu4o5ku0bGulNu4`
+   - `GEMINI_API_KEY`: 발급받은 Gemini API 키
    - `NEWS_API_KEY`: (선택사항)
 4. "Redeploy" 클릭
 

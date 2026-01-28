@@ -37,7 +37,6 @@ export default function Home() {
     setConversationHistory([]);
 
     try {
-      // 뉴스 검색
       const searchResponse = await fetch('/api/search', {
         method: 'POST',
         headers: {
@@ -54,7 +53,6 @@ export default function Home() {
       const searchData = await searchResponse.json();
       setNews(searchData.news || []);
 
-      // 뉴스 요약
       if (searchData.news && searchData.news.length > 0) {
         const summarizeResponse = await fetch('/api/summarize', {
           method: 'POST',
@@ -69,8 +67,9 @@ export default function Home() {
           setSummary(summarizeData.summary || '');
         }
       }
-    } catch (err: any) {
-      setError(err.message || '오류가 발생했습니다.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '오류가 발생했습니다.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -123,11 +122,18 @@ export default function Home() {
       };
 
       setConversationHistory([...updatedHistory, assistantMessage]);
-    } catch (err: any) {
-      setError(err.message || '채팅 중 오류가 발생했습니다.');
-      setConversationHistory(conversationHistory); // 실패 시 이전 상태로 복원
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '채팅 중 오류가 발생했습니다.';
+      setError(errorMessage);
+      setConversationHistory(conversationHistory);
     } finally {
       setChatLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, action: () => void) => {
+    if (e.key === 'Enter') {
+      action();
     }
   };
 
@@ -135,7 +141,7 @@ export default function Home() {
     <div className="container">
       <div className="card">
         <h1 style={{ marginBottom: '2rem', color: '#333', fontSize: '2rem' }}>
-          🔍 뉴스 검색 및 AI 챗봇
+          뉴스 검색 및 AI 챗봇
         </h1>
 
         <div className="input-group">
@@ -144,7 +150,7 @@ export default function Home() {
             placeholder="검색할 키워드를 입력하세요..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={(e) => handleKeyDown(e, handleSearch)}
             disabled={loading}
           />
           <button
@@ -164,7 +170,7 @@ export default function Home() {
           <>
             <div>
               <h2 style={{ marginBottom: '1rem', color: '#333' }}>
-                📰 검색된 뉴스 ({news.length}개)
+                검색된 뉴스 ({news.length}개)
               </h2>
               <div className="news-list">
                 {news.map((item, index) => (
@@ -185,14 +191,14 @@ export default function Home() {
 
             {summary && (
               <div className="summary-section">
-                <h2>📝 뉴스 요약</h2>
+                <h2>뉴스 요약</h2>
                 <p style={{ whiteSpace: 'pre-wrap' }}>{summary}</p>
               </div>
             )}
 
             <div className="chat-section">
               <h2 style={{ marginBottom: '1rem', color: '#333' }}>
-                💬 뉴스에 대해 질문하기
+                뉴스에 대해 질문하기
               </h2>
 
               {conversationHistory.length > 0 && (
@@ -214,7 +220,7 @@ export default function Home() {
                   placeholder="뉴스에 대해 질문해보세요..."
                   value={chatMessage}
                   onChange={(e) => setChatMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !chatLoading && handleChat()}
+                  onKeyDown={(e) => !chatLoading && handleKeyDown(e, handleChat)}
                   disabled={chatLoading}
                 />
                 <button
