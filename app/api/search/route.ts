@@ -10,6 +10,7 @@ interface NewsItem {
 
 export async function POST(request: NextRequest) {
   let keyword = '';
+  let dbStatus: { saved: boolean; error?: string; searchId?: string; newsCount?: number } = { saved: false };
   
   try {
     const body = await request.json();
@@ -26,9 +27,25 @@ export async function POST(request: NextRequest) {
     const newsItems = await fetchNewsFromRSS(keyword);
     
     // Supabase에 검색 기록 및 뉴스 저장
-    await saveToDatabase(keyword, newsItems);
+    try {
+      const result = await saveToDatabase(keyword, newsItems);
+      dbStatus = { 
+        saved: true, 
+        searchId: result.searchId,
+        newsCount: result.newsCount 
+      };
+    } catch (dbError) {
+      console.error('DB save error:', dbError);
+      dbStatus = { 
+        saved: false, 
+        error: dbError instanceof Error ? dbError.message : 'Unknown DB error' 
+      };
+    }
 
-    return NextResponse.json({ news: newsItems });
+    return NextResponse.json({ 
+      news: newsItems,
+      dbStatus 
+    });
   } catch (error) {
     console.error('Search error:', error);
     
@@ -36,13 +53,25 @@ export async function POST(request: NextRequest) {
     if (keyword) {
       try {
         const newsItems = await fetchNewsFromRSS(keyword);
-        // DB 저장 실패해도 검색 결과는 반환
+        // DB 저장 시도
         try {
-          await saveToDatabase(keyword, newsItems);
+          const result = await saveToDatabase(keyword, newsItems);
+          dbStatus = { 
+            saved: true, 
+            searchId: result.searchId,
+            newsCount: result.newsCount 
+          };
         } catch (dbError) {
-          console.error('DB save error:', dbError);
+          console.error('DB save error (retry):', dbError);
+          dbStatus = { 
+            saved: false, 
+            error: dbError instanceof Error ? dbError.message : 'Unknown DB error' 
+          };
         }
-        return NextResponse.json({ news: newsItems });
+        return NextResponse.json({ 
+          news: newsItems,
+          dbStatus 
+        });
       } catch (fallbackError) {
         console.error('Fallback error:', fallbackError);
       }
@@ -56,8 +85,10 @@ export async function POST(request: NextRequest) {
 }
 
 // Supabase에 검색 기록 및 뉴스 저장
-async function saveToDatabase(keyword: string, newsItems: NewsItem[]): Promise<void> {
+async function saveToDatabase(keyword: string, newsItems: NewsItem[]): Promise<{ searchId: string; newsCount: number }> {
   const supabase = createServerSupabaseClient();
+  
+  console.log(`[DB] Saving search: "${keyword}" with ${newsItems.length} news items`);
   
   // 검색 기록 저장
   const { data: searchData, error: searchError } = await supabase
@@ -67,15 +98,18 @@ async function saveToDatabase(keyword: string, newsItems: NewsItem[]): Promise<v
     .single();
 
   if (searchError) {
-    console.error('Search insert error:', searchError);
-    throw searchError;
+    console.error('[DB] Search insert error:', searchError);
+    throw new Error(`Search insert failed: ${searchError.message}`);
   }
 
   if (!searchData) {
-    throw new Error('Failed to create search record');
+    throw new Error('Failed to create search record - no data returned');
   }
 
+  console.log(`[DB] Search record created with ID: ${searchData.id}`);
+
   // 뉴스 아이템 저장
+  let savedNewsCount = 0;
   if (newsItems.length > 0) {
     const newsRecords = newsItems.map(item => ({
       search_id: searchData.id,
@@ -85,15 +119,23 @@ async function saveToDatabase(keyword: string, newsItems: NewsItem[]): Promise<v
       display_link: item.displayLink,
     }));
 
-    const { error: newsError } = await supabase
+    console.log(`[DB] Inserting ${newsRecords.length} news items...`);
+
+    const { data: newsData, error: newsError } = await supabase
       .from('news_items')
-      .insert(newsRecords);
+      .insert(newsRecords)
+      .select('id');
 
     if (newsError) {
-      console.error('News insert error:', newsError);
-      throw newsError;
+      console.error('[DB] News insert error:', newsError);
+      throw new Error(`News insert failed: ${newsError.message}`);
     }
+
+    savedNewsCount = newsData?.length || 0;
+    console.log(`[DB] Successfully saved ${savedNewsCount} news items`);
   }
+
+  return { searchId: searchData.id, newsCount: savedNewsCount };
 }
 
 // Google News RSS에서 뉴스 가져오기
